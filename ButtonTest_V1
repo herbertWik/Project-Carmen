@@ -1,0 +1,187 @@
+// Denne versjonen legger til 3 knapper for å teste de forskjellige twitterstringene
+// Twitter + esp 32 wifi
+#include <Arduino.h>
+//#include <HX711.h>
+#include <LiquidCrystal.h>
+#include <WiFi.h>
+#include <Twitter.h>
+
+#define button2 19
+#define button 18
+
+#define dataPin 21        //eksempelbruk av Hx711 brett med to sensorverdier som amplifier verdiene
+#define clockPin 22
+
+#define ledPin 23
+//HX711 scale(dataPin, clockPin);
+//HX711 scale(11, 10);    //Vekt til kaffepulver, vi må mest sansynligvis ha enda en microkontroller for dette da libbet ikke vil ta to innputs
+
+Twitter twitter("964063748691554304-dLbY115rQgNrTQ1T9NieZdnaExucLgQ");
+const int rs = 27, en = 14, d4 = 32, d5 = 33, d6 = 25, d7 = 26;
+LiquidCrystal lcd(rs, en, d4, d5, d6, d7);
+
+const char* ssid = ("ntnuguest");
+const char* password =  ("");
+
+int buttonState = 0;
+int buttonState2 = 0;
+//float calibration_factor = -96650;        //testet -8000 funket ish
+
+//Messages to Post
+//funker ikke enda.... se:              (kanskje fikset)
+//  https://stackoverflow.com/questions/27550928/generate-random-string-from-array
+
+char *msg_out[] = {
+  (char*)"I'm empty, fill me up!",                          //Tomt
+  (char*) "all out of coffee :'(",
+  (char*) "Somebody better fill me the hell up...",
+  (char*) "can one of you nerds fill me up?"
+};
+char *msg_half[] = {
+  (char*) "I'm half full, or half empty, or whatever...",   //halvfult
+  (char*) "Half out, better hurry up and get some"
+};
+char *msg_full[] = {
+  (char*) "All filled up, come drain my fluids ;)",         //full
+  (char*) "Full of hot steamy black liquid"
+};
+char *msg_powder[] = {
+  (char*) "Need more powder..."};                         //vekt nr2
+
+
+void setup() {
+
+  Serial.begin(115200);
+
+  lcd.begin(16, 2);
+  lcd.setCursor(0, 0);
+  lcd.print("hello, world!");
+  lcd.setCursor(0, 1);
+  lcd.print("i'm Carmen");
+  delay(1000);
+
+  pinMode(dataPin, INPUT);
+  pinMode(clockPin, INPUT);
+
+  pinMode(button, INPUT);
+  pinMode(ledPin, OUTPUT);
+
+
+
+  WiFi.begin(ssid, password);
+
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  while (WiFi.status() != WL_CONNECTED) {
+    lcd.print("Connecting WiFi");
+    delay(500);
+    lcd.clear();
+    lcd.print("Connecting WiFi.");
+    delay(500);
+    lcd.clear();
+  }
+    lcd.setCursor(0, 1);
+    lcd.print("Success!");
+    delay(500);
+}
+
+void loop() {
+  lcd.clear();
+  lcd.print("press left!");
+  while (!digitalRead(button2)) {}
+
+  int success= 0;
+  int msg = 0;        //kun for erstatning av loadcells
+
+  buttonState = digitalRead(button);
+    if (buttonState == HIGH) {
+      lcd.clear();
+      lcd.setCursor(0, 0);
+      lcd.print("buttonPressed");
+      msg = 1000;
+    }
+
+delay(1000);
+  /*
+  lcd.setCursor(0, 0);
+  lcd.print(scale.read());        //fikse printeverdi
+  lcd.print(" g");
+  lcd.print("       ");
+
+  int sensorMin = 0;
+  int sensorMax = 2500;
+  int sensorReading = 0;             //finne ut hvordan man henter ut dataen fra hx711 (tror scalefactor er rundt -8000)
+  int success = 0;
+*/
+ //int msg = map(sensorReading, sensorMin, sensorMax, 0, 3);    //må tweakes til riktige verdier for Karma. Dvs verdier i ant kopper, prosent, etc
+
+lcd.clear();
+
+lcd.print("Checking funk...");
+delay(500);
+lcd.clear();
+  if (10 <=  msg && msg <= 300) {
+    success = twitter.post(msg_out[random(0, 4)]);
+    lcd.print("Twitter out");
+  }
+  else if (1000 <= msg && msg <= 1250) {
+    success = twitter.post(msg_half[random(0, 2)]);
+    lcd.print("Twitter half");
+  }
+  else if (msg > 2500) {
+    success = twitter.post(msg_full[random(0, 2)]);
+    lcd.print("Twitter full");
+  }
+/*
+  switch(msg) {
+    case 0:
+      //Tomt for kaffe
+      if(10 < msg && msg < 300) {
+        success = twitter.post(msg_out[random(0, 4)]);
+        lcd.print("Twitter out");
+      }
+      break;
+
+    case 1:
+      //halvfull kanne
+      if(1000 < msg && msg < 1250) {
+        success = twitter.post(msg_half[random(0, 2)]);
+        lcd.print("Twitter half");
+      }
+      break;
+
+    case 2:
+      //full kanne
+      if(msg > 2500)  {
+        success = twitter.post(msg_full[random(0, 2)]);
+        lcd.print("Twitter full");
+      }
+      break;
+}
+*/
+    delay(2000);
+
+    if (success) {                         //kan legge til 3 statusleds grønn for ok, gul for prosseserer, og rød for error
+      lcd.clear();
+      lcd.setCursor(0,0);
+      lcd.print("connecting...");
+      delay(1000);
+      lcd.clear();
+      lcd.setCursor(0,1);
+
+      int status = twitter.wait();
+          if (status == 200) {
+            lcd.print("Twitterposting...");
+          }
+          else {
+            lcd.print("twitter overload");
+            lcd.print(status);
+            }
+        }
+    else {
+        lcd.print("No Post");
+        }
+delay(500);
+lcd.clear();
+
+}
